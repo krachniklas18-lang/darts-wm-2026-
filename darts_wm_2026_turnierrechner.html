@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Darts WM 2026 – Turnierrechner</title>
+
+<style>
+body{
+  margin:0;
+  background:radial-gradient(circle at top,#111,#000);
+  color:#fff;
+  font-family:Arial, sans-serif;
+  text-align:center;
+}
+h1{margin:20px 0;}
+
+button{
+  cursor:pointer;
+  border:none;
+  border-radius:8px;
+  padding:8px 12px;
+  margin:4px;
+  background:#1e88e5;
+  color:#fff;
+}
+button:hover{background:#1565c0;}
+
+#controls{margin-bottom:20px;}
+
+#tournament{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+
+.round-title{
+  width:100%;
+  margin:30px 0 10px;
+  font-size:20px;
+  color:#ffd700;
+}
+
+.match{
+  background:#111;
+  border-radius:16px;
+  padding:12px;
+  margin:10px;
+  width:260px;
+}
+
+.vs{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.card{
+  width:100px;
+  background:#000;
+  border-radius:12px;
+  overflow:hidden;
+}
+
+.card img{
+  width:100%;
+  height:120px;
+  object-fit:cover;
+}
+
+.name{
+  font-size:13px;
+  padding:6px;
+}
+
+.actions{margin-top:6px;}
+
+#focus{
+  display:none;
+  justify-content:center;
+  align-items:center;
+  height:85vh;
+}
+
+.focus-card{
+  display:flex;
+  align-items:center;
+  background:#000;
+  padding:30px;
+  border-radius:20px;
+  box-shadow:0 0 50px gold;
+}
+
+.focus-player{
+  width:260px;
+}
+
+.focus-player img{
+  width:100%;
+  height:320px;
+  object-fit:cover;
+  border-radius:16px;
+}
+
+.focus-name{
+  margin-top:10px;
+  font-size:22px;
+  font-weight:bold;
+}
+
+.focus-vs{
+  font-size:48px;
+  margin:0 40px;
+  color:#ffd700;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Darts WM 2026 – Turnierrechner</h1>
+
+<div id="controls">
+  <button onclick="newDraw()">🔄 Neue Auslosung</button>
+</div>
+
+<div id="tournament"></div>
+<div id="focus"></div>
+
+<script>
+// ================= SPIELER =================
+
+// Top 32 Seeds
+const seeds=[
+"Luke Humphries","Luke Littler","Michael van Gerwen","Michael Smith",
+"Gerwyn Price","Rob Cross","Nathan Aspinall","Jonny Clayton",
+"Peter Wright","Damon Heta","Chris Dobey","Dave Chisnall",
+"Danny Noppert","Dirk van Duijvenbode","Stephen Bunting","Joe Cullen",
+"James Wade","Gary Anderson","Ross Smith","Ryan Searle",
+"Jose de Sousa","Callan Rydz","Martin Schindler","Andrew Gilding",
+"Mensur Suljovic","Raymond van Barneveld","Brendan Dolan","Josh Rock",
+"Dimitri Van den Bergh","Ritchie Edhouse","Kim Huybrechts","Ricardo Pietreczko"
+];
+
+// 96 Ungesetzte (realistisch, gemischt)
+const qualifiers=Array.from({length:96},(_,i)=>"Qualifier "+(i+1));
+
+// ================= LÄNDER =================
+const playerCountry={
+"Luke Humphries":"ENG","Luke Littler":"ENG","Michael van Gerwen":"NED",
+"Michael Smith":"ENG","Gerwyn Price":"WAL","Rob Cross":"ENG",
+"Nathan Aspinall":"ENG","Jonny Clayton":"WAL","Peter Wright":"SCO",
+"Damon Heta":"AUS","Martin Schindler":"GER","Ricardo Pietreczko":"GER",
+default:"INT"
+};
+
+const countries={
+ENG:{flag:"https://flagcdn.com/w40/gb-eng.png",color:"#d50000"},
+NED:{flag:"https://flagcdn.com/w40/nl.png",color:"#ff6f00"},
+GER:{flag:"https://flagcdn.com/w40/de.png",color:"#000"},
+WAL:{flag:"https://flagcdn.com/w40/gb-wls.png",color:"#c62828"},
+SCO:{flag:"https://flagcdn.com/w40/gb-sct.png",color:"#1565c0"},
+AUS:{flag:"https://flagcdn.com/w40/au.png",color:"#2e7d32"},
+INT:{flag:"https://flagcdn.com/w40/un.png",color:"#555"}
+};
+
+// ================= BILDER =================
+const playerImages={default:"https://via.placeholder.com/300x400?text=Darts+WM"};
+
+function getCountry(p){return playerCountry[p]||playerCountry.default;}
+function getFlag(p){return countries[getCountry(p)].flag;}
+function getColor(p){return countries[getCountry(p)].color;}
+function getImg(p){return playerImages[p]||playerImages.default;}
+
+// ================= TURNIER =================
+let rounds=[];
+
+function initTournament(){
+  rounds=[];
+  const unseeded=[...qualifiers].sort(()=>Math.random()-0.5);
+
+  // Runde 1: 96 → 48
+  const r1=[];
+  for(let i=0;i<96;i+=2) r1.push({p1:unseeded[i],p2:unseeded[i+1]});
+  rounds.push(r1);
+
+  // Runde 2: Seeds warten
+  const r2=[];
+  for(let i=0;i<32;i++) r2.push({p1:null,p2:seeds[i]});
+  rounds.push(r2);
+
+  render();
+}
+
+function render(){
+  const t=document.getElementById("tournament");
+  t.innerHTML="";
+  rounds.forEach((round,r)=>{
+    const title=document.createElement("div");
+    title.className="round-title";
+    title.textContent="Runde "+(r+1);
+    t.appendChild(title);
+
+    round.forEach((m,i)=>{
+      const d=document.createElement("div");
+      d.className="match";
+      renderMatch(d,r,i);
+      t.appendChild(d);
+    });
+  });
+}
+
+function renderMatch(div,r,m){
+  const match=rounds[r][m];
+  div.innerHTML=`
+  <div class="vs">
+    <div class="card" style="outline:3px solid ${getColor(match.p1)}">
+      <img src="${getImg(match.p1)}" onerror="this.src=playerImages.default">
+      <div class="name"><img src="${getFlag(match.p1)}"> ${match.p1||"—"}</div>
+    </div>
+    <div>VS</div>
+    <div class="card" style="outline:3px solid ${getColor(match.p2)}">
+      <img src="${getImg(match.p2)}" onerror="this.src=playerImages.default">
+      <div class="name"><img src="${getFlag(match.p2)}"> ${match.p2||"—"}</div>
+    </div>
+  </div>
+  <div class="actions">
+    ${match.p1?`<button onclick="setWinner(${r},${m},1)">${match.p1} gewinnt</button>`:""}
+    ${match.p2?`<button onclick="setWinner(${r},${m},2)">${match.p2} gewinnt</button>`:""}
+    <button onclick="showFocus(${r},${m})">📺 Match</button>
+  </div>`;
+}
+
+function setWinner(r,m,w){
+  const win=w===1?rounds[r][m].p1:rounds[r][m].p2;
+  if(!rounds[r+1]) rounds[r+1]=[];
+  const idx=Math.floor(m/2);
+  if(!rounds[r+1][idx]) rounds[r+1][idx]={};
+  if(m%2===0) rounds[r+1][idx].p1=win;
+  else rounds[r+1][idx].p2=win;
+  render();
+}
+
+function showFocus(r,m){
+  const match=rounds[r][m];
+  document.getElementById("tournament").style.display="none";
+  const f=document.getElementById("focus");
+  f.style.display="flex";
+  f.innerHTML=`
+  <div class="focus-card">
+    <div class="focus-player">
+      <img src="${getImg(match.p1)}"><div class="focus-name">${match.p1}</div>
+    </div>
+    <div class="focus-vs">VS</div>
+    <div class="focus-player">
+      <img src="${getImg(match.p2)}"><div class="focus-name">${match.p2}</div>
+    </div>
+  </div>
+  <div><button onclick="hideFocus()">⬅ Zurück</button></div>`;
+}
+
+function hideFocus(){
+  document.getElementById("focus").style.display="none";
+  document.getElementById("tournament").style.display="flex";
+}
+
+function newDraw(){initTournament();}
+
+initTournament();
+</script>
+
+</body>
+</html>
+
